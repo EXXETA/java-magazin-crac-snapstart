@@ -1,0 +1,56 @@
+name: 'Deployment to AWS'
+on: [ push ]
+env:
+  JAVA_VERSION: "21"
+  MAVEN_VERSION: "3.9.5"
+  JAVA_DISTRIBUTION: "corretto"
+  SAM_S3_BUCKET_NAME: "java-magazin-bucket"
+jobs:
+  test:
+    name: 'Maven verify'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@v4
+      - name: 'Java: Setup'
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+      - name: 'Set up Maven'
+        uses: stCarolas/setup-maven@v5
+        with:
+          maven-version: ${{ env.MAVEN_VERSION }}
+      - name: 'Maven: verify'
+        run: mvn clean verify
+  deploy-crac:
+    name: 'Deploy to AWS Lambda'
+    runs-on: ubuntu-22.04
+    needs: test
+    #if: ${{ github.ref == 'refs/heads/main' }}
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@v4
+      - name: 'Java: Setup'
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+      - name: 'Set up Maven'
+        uses: stCarolas/setup-maven@v5
+        with:
+          maven-version: ${{ env.MAVEN_VERSION }}
+      - name: 'Maven: verify'
+        run: mvn -Pcrac package
+      - name: 'Install AWS SAM CLI'
+        run: pip install aws-sam-cli
+      - name: 'Package SAM application'
+        run: sam package --template-file ./iac/crac-deployment.yml --s3-bucket ${{ env.SAM_S3_BUCKET_NAME }} --output-template-file packaged.yaml --region eu-central-1
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Deploy SAM application
+        run: sam deploy --template-file ./iac/crac-deployment.yml --s3-bucket ${{ env.SAM_S3_BUCKET_NAME }} --stack-name java-magazin-2024 --region eu-central-1 --capabilities CAPABILITY_IAM
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

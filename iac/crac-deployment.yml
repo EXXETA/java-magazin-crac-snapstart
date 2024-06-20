@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: >
+  crac-demo-java-magazin
+
+Resources:
+  JavaMagazinSnapStartFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: Java-Magazin-Crac-Snapstart-Demo
+      Handler: com.amazonaws.serverless.proxy.spring.SpringDelegatingLambdaContainerHandler
+      Runtime: java21
+      CodeUri: ./../target/serverless.jar
+      MemorySize: 2048
+      Timeout: 30
+      AutoPublishAlias: SnapStart
+      SnapStart:
+        ApplyOn: PublishedVersions
+      Environment:
+        Variables:
+          MAIN_CLASS: com.exxeta.serverless.ServerlessApplication
+          SPRING_DATASOURCE_HIKARI_ALLOW_POOL_SUSPENSION: true
+          contextInitTimeout: 240000
