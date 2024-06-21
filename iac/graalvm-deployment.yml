@@ -1,0 +1,17 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: >
+  graalvm-demo-java-magazin
+
+Resources:
+  JavaMagazinGraalVMFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: Java-Magazin-GraalVM-Demo
+      Runtime: provided.al2023
+      CodeUri: ./../target/serverless.zip
+      MemorySize: 512
+      Handler: NOP
+      Timeout: 30
+      Architectures:
+        - x86_64

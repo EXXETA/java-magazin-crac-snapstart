@@ -1,4 +1,4 @@
-name: 'Deployment to AWS'
+name: 'SnapStart'
 on: [ push ]
 env:
   JAVA_VERSION: "21"
