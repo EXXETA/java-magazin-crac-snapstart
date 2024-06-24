@@ -4,6 +4,11 @@ Description: >
   crac-demo-java-magazin
 
 Resources:
+  JavaMagazinSecretsManager:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: JavaMagazinRDSSecrets
+
   JavaMagazinSnapStartFunction:
     Type: AWS::Serverless::Function
     Properties:
