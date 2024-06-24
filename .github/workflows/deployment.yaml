@@ -31,26 +31,31 @@ jobs:
     steps:
       - name: 'Checkout'
         uses: actions/checkout@v4
-      - name: 'Java: Setup'
-        uses: actions/setup-java@v4
+      - name: 'GraalVM: Setup'
+        uses: graalvm/setup-graalvm@v1
         with:
           java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: 'Set up Maven'
         uses: stCarolas/setup-maven@v5
         with:
           maven-version: ${{ env.MAVEN_VERSION }}
-      - name: 'Maven: verify'
-        run: mvn -Pcrac package
+      - name: 'Build Native Image'
+        run: |
+          mvn -Pnative native:compile -DskipTests
+          mv ./src/main/resources/bootstrap target
+          chmod 777 target/serverless && chmod 777 target/bootstrap && chmod +x target/bootstrap
+          cd target && zip ./../graalvm-serverless.zip serverless bootstrap && cd ..
+      - name: 'Maven: Package CRaC'
+        run: mvn clean -Pcrac package
       - name: 'Install AWS SAM CLI'
         run: pip install aws-sam-cli
       - name: 'Package SAM application'
-        run: sam package --template-file ./iac/crac-deployment.yml --s3-bucket ${{ env.SAM_S3_BUCKET_NAME }} --output-template-file packaged.yaml --region eu-central-1
+        run: sam package --template-file ./iac/aws-deployment.yml --s3-bucket ${{ env.SAM_S3_BUCKET_NAME }} --output-template-file packaged.yaml --region eu-central-1
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: Deploy SAM application
-        run: sam deploy --template-file ./iac/crac-deployment.yml --s3-bucket ${{ env.SAM_S3_BUCKET_NAME }} --stack-name java-magazin-2024 --region eu-central-1 --capabilities CAPABILITY_IAM
+        run: sam deploy --template-file ./iac/aws-deployment.yml --s3-bucket ${{ env.SAM_S3_BUCKET_NAME }} --stack-name java-magazin-2024 --region eu-central-1 --capabilities CAPABILITY_IAM
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
