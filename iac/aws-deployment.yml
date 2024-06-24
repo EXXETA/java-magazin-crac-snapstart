@@ -26,6 +26,9 @@ Resources:
           MAIN_CLASS: com.exxeta.serverless.ServerlessApplication
           SPRING_DATASOURCE_HIKARI_ALLOW_POOL_SUSPENSION: true
           contextInitTimeout: 240000
+          SPRING_DATASOURCE_PASSWORD: !Sub '{{resolve:secretsmanager:${JavaMagazinSecretsManager}::SPRING_DATASOURCE_PASSWORD}}'
+          SPRING_DATASOURCE_URL: !Sub '{{resolve:secretsmanager:${JavaMagazinSecretsManager}::SPRING_DATASOURCE_URL}}'
+          SPRING_DATASOURCE_USERNAME: !Sub '{{resolve:secretsmanager:${JavaMagazinSecretsManager}::SPRING_DATASOURCE_USERNAME}}'
 
   JavaMagazinGraalVMFunction:
     Type: AWS::Serverless::Function
@@ -38,3 +41,8 @@ Resources:
       Timeout: 30
       Architectures:
         - x86_64
+      Environment:
+        Variables:
+          SPRING_DATASOURCE_PASSWORD: !Sub '{{resolve:secretsmanager:${JavaMagazinSecretsManager}::SPRING_DATASOURCE_PASSWORD}}'
+          SPRING_DATASOURCE_URL: !Sub '{{resolve:secretsmanager:${JavaMagazinSecretsManager}::SPRING_DATASOURCE_URL}}'
+          SPRING_DATASOURCE_USERNAME: !Sub '{{resolve:secretsmanager:${JavaMagazinSecretsManager}::SPRING_DATASOURCE_USERNAME}}'
