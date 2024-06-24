@@ -1,93 +1,102 @@
-# snapstart-poc
+# Java über den Wolken: Serverlose Enterprise-Anwendungen mit JDK CRaC und AWS SnapStart
+Repository zum Java Magazin-Artikel von [Johannes Link](https://de.linkedin.com/in/link-johannes), Yahya El Hadj Ahmed und [Jan Hauer](https://de.linkedin.com/in/jan-hauer) im September 2024.
 
+## Ziel dieses Repos
+Dieses Repository zeigt, wie eine Enterprise Spring Boot 3-Anwendung mit JDK CRaC, AWS SnapStart bzw. GraalVM Native Image und dem [serverless-java-container](https://github.com/aws/serverless-java-container) von AWS bereigestellt werden können.
 
+## Voraussetzungen
+1. Anlegen eines technischen Users in AWS. Dessen access-key-id und secret-access-key müssen als Secrets der GitHub-Action unter den Bezeichnungen AWS_ACCESS_KEY_ID und AWS_SECRET_ACCESS_KEY übergeben werden.
+2. Anlegen einer Postgres-Datenbank in AWS. Über das Deployment der Infrastruktur mit AWS SAM wird automatisch ein SecretsManager angelegt. Darin müssen die Zugagnsdaten über die Secrets SPRING_DATASOURCE_PASSWORD, SPRING_DATASOURCE_URL und SPRING_DATASOURCE_USERNAME angegeben werden. AWS SAM kopiertt diese Werte automatisch zu den Lambda-Funktionen.
 
-## Getting started
+## Erläuterung der relevanten Code-Stellen
+An den Ordnern `src/main/java` und `src/test/java` ist zu erkennen, dass eine "gewöhnliche" Spring Boot-Anwendung mit Spring WebMvc und Spring Data zum Einsatz kommt. Diese wird unverändert auf AWS Lambda deployt.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
+### Einbindung des serverless-java-containers
+Der serverless-java-container wird als Dependency in Maven eingebunden. Dieser wird benötigt, um AWS Events in HTTP-Anfragen zu transformieren und gemäß der Servlet-Spezifikation an die Spring Boot Controller zu übergeben.
+```xml
+<dependency>
+    <groupId>com.amazonaws.serverless</groupId>
+    <artifactId>aws-serverless-java-container-springboot3</artifactId>
+    <version>2.0.3</version>
+</dependency>
 ```
-cd existing_repo
-git remote add origin https://gitlabci.exxeta.com/joli/snapstart-poc.git
-git branch -M main
-git push -uf origin main
+
+Beim Einsatz auf AWS Lambda muss die Umgebungsvariable MAIN_CLASS auf die Spring Boot Hauptklasse gesetzt werden.
+```text
+MAIN_CLASS=com.exxeta.serverless.ServerlessApplication
 ```
 
-## Integrate with your tools
+### CRaC / AWS SnapStart
+Die Kompilierung für AWS SnapStart erfolgt mit dem Befehl.
+```shell
+mvn -Pcrac package
+```
 
-- [ ] [Set up project integrations](https://gitlabci.exxeta.com/joli/snapstart-poc/-/settings/integrations)
+Hierbei wird die crac-dependency via Maven eingebunden.
+```xml
+<dependency>
+    <groupId>org.crac</groupId>
+    <artifactId>crac</artifactId>
+</dependency>
+```
 
-## Collaborate with your team
+Außerdem wird die JAR-Datei über das Shade-Plugin kompiliert.
+```xml
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>3.6.0</version>
+            <configuration>
+                <createDependencyReducedPom>false</createDependencyReducedPom>
+            </configuration>
+            <executions>
+                <execution>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>shade</goal>
+                    </goals>
+                    <configuration>
+                        <finalName>${artifactId}</finalName>
+                        <artifactSet>
+                            <excludes>
+                                <exclude>org.apache.tomcat.embed:*</exclude>
+                            </excludes>
+                        </artifactSet>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
+```
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+Beim Deployment ist zu beachten, SnapStart auf AWS Lambda in AWS SAM zu aktivieren.
+```yml
+AutoPublishAlias: SnapStart
+SnapStart:
+  ApplyOn: PublishedVersions
+```
 
-## Test and Deploy
+Außerdem müssen (neben der MAIN_CLASS) folgende Umgebungsvariablen gesetzt werden.
+```text
+SPRING_DATASOURCE_HIKARI_ALLOW_POOL_SUSPENSION: true
+contextInitTimeout: 240000
+```
 
-Use the built-in continuous integration in GitLab.
+### GraalVM Native Image
+Die Kompilierung des Native Image erfolgt mit folgendem Befehl.
+```shell
+mvn -Pnative native:compile
+```
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+Die entstehende ./serverless-Datei muss zusammen mit der Bootstrap-Datei im Ordner `src/main/resources` bereitgestellt werden. AWS Lambda benötigt diese Datei zum starten der nativen Applikation.
+```shell
+#!/bin/sh
+set -euo pipefail
+./serverless
+```
 
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+### Wichtiger Hinweis
+Die Spring Boot-Anwendung muss in AWS Lambda mit einem apigateway-aws-proxy Event getestet werden. Andere Arten von Events führen zu einem Laufzeitfehler im serverless-java-container.
