@@ -46,3 +46,75 @@ Resources:
           SPRING_DATASOURCE_PASSWORD: !Sub '{{resolve:secretsmanager:${JavaMagazinSecretsManager}::SPRING_DATASOURCE_PASSWORD}}'
           SPRING_DATASOURCE_URL: !Sub '{{resolve:secretsmanager:${JavaMagazinSecretsManager}::SPRING_DATASOURCE_URL}}'
           SPRING_DATASOURCE_USERNAME: !Sub '{{resolve:secretsmanager:${JavaMagazinSecretsManager}::SPRING_DATASOURCE_USERNAME}}'
+
+  JavaMagazinApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: JavaMagazinApi
+      StageName: Prod
+      EndpointConfiguration: REGIONAL
+      DefinitionBody:
+        swagger: 2.0
+        info:
+          title: JavaMagazin API
+          version: 1.0
+        paths:
+          /snapstart/{proxy+}:
+            x-amazon-apigateway-any-method:
+              produces:
+                - application/json
+              x-amazon-apigateway-integration:
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${JavaMagazinSnapStartFunction.Arn}:SnapStart/invocations
+                passthroughBehavior: WHEN_NO_MATCH
+                httpMethod: POST
+                type: aws_proxy
+                requestTemplates:
+                  application/json: |
+                    #set($path = $input.path('$').substring($input.path('$').indexOf('/snapstart') + 10))
+                    {
+                      "path": "$path
+                    }
+          /graalvm/{proxy+}:
+            x-amazon-apigateway-any-method:
+              produces:
+                - application/json
+              x-amazon-apigateway-integration:
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${JavaMagazinGraalVMFunction.Arn}/invocations
+                passthroughBehavior: WHEN_NO_MATCH
+                httpMethod: POST
+                type: aws_proxy
+                requestTemplates:
+                  application/json: |
+                    #set($contextPath = "/graalvm")
+                    #set($newPath = $input.params().path.get("proxy").substring($contextPath.length()))
+                    {
+                      "body": $input.json('$'),
+                      "path": "$newPath",
+                      "pathParameters": {
+                        "proxy": "$newPath"
+                      }
+                    }
+
+  JavaMagazinSnapStartFunctionInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt JavaMagazinSnapStartFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${JavaMagazinApiGateway}/*/*/snapstart/*
+
+  JavaMagazinSnapStartFunctionVersionInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Sub ${JavaMagazinSnapStartFunction.Arn}:SnapStart
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${JavaMagazinApiGateway}/*/*/snapstart/*
+
+  JavaMagazinGraalVMFunctionInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt JavaMagazinGraalVMFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${JavaMagazinApiGateway}/*/*/graalvm/*
