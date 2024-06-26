@@ -5,6 +5,7 @@ target/
 !**/src/test/**/target/
 graalvm-serverless.zip
 iac/packaged.yaml
+packaged.yaml
 
 ### STS ###
 .apt_generated
