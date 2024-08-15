@@ -1,5 +1,5 @@
 # Java über den Wolken: Serverlose Enterprise-Anwendungen mit JDK CRaC und AWS SnapStart
-Repository zum Java Magazin-Artikel von [Johannes Link](https://de.linkedin.com/in/link-johannes), Yahya El Hadj Ahmed und [Jan Hauer](https://de.linkedin.com/in/jan-hauer) im September 2024.
+Repository zum Java Magazin-Artikel von [Johannes Link](https://de.linkedin.com/in/link-johannes), [Yahya El Hadj Ahmed](https://www.linkedin.com/in/yahya-el-hadj-ahmed-b329892a4/) und [Jan Hauer](https://de.linkedin.com/in/jan-hauer) im September 2024.
 
 ## Ziel dieses Repos
 Dieses Repository zeigt, wie eine Enterprise Spring Boot 3-Anwendung mit JDK CRaC, AWS SnapStart bzw. GraalVM Native Image und dem [serverless-java-container](https://github.com/aws/serverless-java-container) von AWS bereigestellt werden können.
