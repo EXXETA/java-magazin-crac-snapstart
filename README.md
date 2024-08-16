@@ -1,12 +1,12 @@
 # Java über den Wolken: Serverlose Enterprise-Anwendungen mit JDK CRaC und AWS SnapStart
-Repository zum Java Magazin-Artikel von [Johannes Link](https://de.linkedin.com/in/link-johannes), [Yahya El Hadj Ahmed](https://www.linkedin.com/in/yahya-el-hadj-ahmed-b329892a4/) und [Jan Hauer](https://de.linkedin.com/in/jan-hauer) im September 2024.
+Repository zum Java Magazin-Artikel von [Johannes Link](https://de.linkedin.com/in/link-johannes), [Yahya El Hadj Ahmed](https://www.linkedin.com/in/yahya-el-hadj-ahmed-b329892a4/) und [Jan Hauer](https://de.linkedin.com/in/jan-hauer) im August 2024.
 
 ## Ziel dieses Repos
-Dieses Repository zeigt, wie eine Enterprise Spring Boot 3-Anwendung mit JDK CRaC, AWS SnapStart bzw. GraalVM Native Image und dem [serverless-java-container](https://github.com/aws/serverless-java-container) von AWS bereigestellt werden können.
+Dieses Repository zeigt, wie eine Enterprise Spring Boot 3-Anwendung mit JDK CRaC, AWS SnapStart bzw. GraalVM Native Image und dem [serverless-java-container](https://github.com/aws/serverless-java-container) von AWS bereitgestellt werden können.
 
 ## Voraussetzungen
 1. Anlegen eines technischen Users in AWS. Dessen access-key-id und secret-access-key müssen als Secrets der GitHub-Action unter den Bezeichnungen AWS_ACCESS_KEY_ID und AWS_SECRET_ACCESS_KEY übergeben werden.
-2. Anlegen einer Postgres-Datenbank in AWS. Über das Deployment der Infrastruktur mit AWS SAM wird automatisch ein SecretsManager angelegt. Darin müssen die Zugagnsdaten über die Secrets SPRING_DATASOURCE_PASSWORD, SPRING_DATASOURCE_URL und SPRING_DATASOURCE_USERNAME angegeben werden. AWS SAM kopiertt diese Werte automatisch zu den Lambda-Funktionen.
+2. Anlegen einer Postgres-Datenbank in AWS. Über das Deployment der Infrastruktur mit AWS SAM wird automatisch ein SecretsManager angelegt. Darin müssen die Zugangsdaten über die Secrets SPRING_DATASOURCE_PASSWORD, SPRING_DATASOURCE_URL und SPRING_DATASOURCE_USERNAME angegeben werden. AWS SAM kopiert diese Werte automatisch zu den Lambda-Funktionen.
 
 ## Erläuterung der relevanten Code-Stellen
 An den Ordnern `src/main/java` und `src/test/java` ist zu erkennen, dass eine "gewöhnliche" Spring Boot-Anwendung mit Spring WebMvc und Spring Data zum Einsatz kommt. Diese wird unverändert auf AWS Lambda deployt.
